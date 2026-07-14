@@ -811,6 +811,71 @@ describe("runMessageAction media behavior", () => {
       expectAttachmentRemoteMediaPayload(result);
     });
 
+    it("normalizes parameterized whitespace-heavy upload-file data URLs", async () => {
+      const result = await runMessageAction({
+        cfg,
+        action: "upload-file",
+        params: {
+          channel: "attachmentchat",
+          target: "+15551234567",
+          buffer: " \n data:text/plain;charset=utf-8;base64, SGV s\nbG8= \n ",
+          contentType: "application/octet-stream",
+          filename: "hello.bin",
+        },
+      });
+
+      expect(requireActionPayload(result)).toMatchObject({
+        buffer: "SGVsbG8=",
+        contentType: "application/octet-stream",
+        filename: "hello.bin",
+      });
+    });
+
+    it.each([
+      "data:text/plain,hello",
+      "data:text/plain;base64",
+      "data:text/plain;base64;foo=bar,SGVsbG8=",
+    ])("rejects malformed upload-file data URL %s before channel dispatch", async (buffer) => {
+      await expect(
+        runMessageAction({
+          cfg,
+          action: "upload-file",
+          params: {
+            channel: "attachmentchat",
+            target: "+15551234567",
+            buffer,
+          },
+        }),
+      ).rejects.toThrow(/invalid base64/i);
+    });
+
+    it("rejects oversized upload-file data URLs before base64 decoding", async () => {
+      const bufferFromSpy = vi.spyOn(Buffer, "from");
+      try {
+        await expect(
+          runMessageAction({
+            cfg: {
+              ...cfg,
+              agents: { defaults: { mediaMaxMb: 4 / (1024 * 1024) } },
+            },
+            action: "upload-file",
+            params: {
+              channel: "attachmentchat",
+              target: "+15551234567",
+              buffer: "data:text/plain;base64,aGVsbG8=",
+            },
+          }),
+        ).rejects.toThrow(/too large|limit/i);
+
+        const base64Calls = (bufferFromSpy.mock.calls as ReadonlyArray<readonly unknown[]>).filter(
+          (call) => call[1] === "base64",
+        );
+        expect(base64Calls).toHaveLength(0);
+      } finally {
+        bufferFromSpy.mockRestore();
+      }
+    });
+
     it("keeps original upload-file bytes when forced to send as a document", async () => {
       await runMessageAction({
         cfg,

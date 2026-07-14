@@ -1,11 +1,11 @@
 // Whatsapp plugin module implements outbound media contract behavior.
 import path from "node:path";
-import { sanitizeForPlainText } from "openclaw/plugin-sdk/channel-outbound";
-import { mediaKindFromMime, normalizeMimeType } from "openclaw/plugin-sdk/media-mime";
 import {
   MEDIA_FFMPEG_MAX_AUDIO_DURATION_SECS,
   transcodeAudioBufferToOpus,
-} from "openclaw/plugin-sdk/media-runtime";
+} from "openclaw/plugin-sdk/audio-transcode";
+import { sanitizeForPlainText } from "openclaw/plugin-sdk/channel-outbound";
+import { kindFromMime, normalizeMimeType } from "openclaw/plugin-sdk/media-mime";
 import { resolveOutboundMediaUrls } from "openclaw/plugin-sdk/reply-payload";
 import { normalizeUniqueStringEntries } from "openclaw/plugin-sdk/string-coerce-runtime";
 import { resolveWhatsAppDocumentFileName } from "./document-filename.js";
@@ -125,7 +125,7 @@ function inferWhatsAppMediaKind(
   ) {
     return media.kind;
   }
-  return mediaKindFromMime(normalizeMimeType(media.contentType)) ?? "document";
+  return kindFromMime(media.contentType) ?? "document";
 }
 
 function normalizeWhatsAppLoadedMedia(

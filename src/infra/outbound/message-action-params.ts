@@ -1,6 +1,5 @@
 // Message-action param normalization hydrates media sources, sandbox paths,
 // base64 buffers, JSON params, and plugin-owned media aliases.
-import { canonicalizeBase64, estimateBase64DecodedBytes } from "@openclaw/media-core/base64";
 import { basenameFromAnyPath } from "@openclaw/media-core/file-name";
 import { extensionForMime } from "@openclaw/media-core/mime";
 import { isRecord } from "@openclaw/normalization-core/record-coerce";
@@ -25,6 +24,11 @@ import { MEDIA_MAX_BYTES } from "../../media/store.js";
 import { loadWebMedia } from "../../media/web-media.js";
 import { resolveSnakeCaseParamKey } from "../../param-key.js";
 import { readBooleanParam as readBooleanParamShared } from "../../plugin-sdk/boolean-param.js";
+import {
+  canonicalizeBoundedBase64Attachment,
+  decodeBoundedBase64Attachment,
+  normalizeBase64Payload,
+} from "./message-action-base64.js";
 import { hasPotentialPluginActionParam } from "./message-action-param-keys.js";
 
 /** Shared boolean param reader used by message-action argument normalization. */
@@ -269,24 +273,6 @@ function inferAttachmentFilename(params: {
   return ext ? `attachment${ext}` : "attachment";
 }
 
-function normalizeBase64Payload(params: { base64?: string; contentType?: string }): {
-  base64?: string;
-  contentType?: string;
-} {
-  if (!params.base64) {
-    return { base64: params.base64, contentType: params.contentType };
-  }
-  const match = /^data:([^;]+);base64,(.*)$/i.exec(params.base64.trim());
-  if (!match) {
-    return { base64: params.base64, contentType: params.contentType };
-  }
-  const [, mime, payload] = match;
-  return {
-    base64: payload,
-    contentType: params.contentType ?? mime,
-  };
-}
-
 function resolveSendBufferMaxBytes(params: {
   cfg: OpenClawConfig;
   channel: ChannelId;
@@ -299,24 +285,6 @@ function resolveSendBufferMaxBytes(params: {
       accountId: params.accountId,
     }) ?? MEDIA_MAX_BYTES
   );
-}
-
-function decodeBoundedBase64Attachment(params: { base64: string; maxBytes: number }): Buffer {
-  const estimatedBytes = estimateBase64DecodedBytes(params.base64);
-  if (estimatedBytes > params.maxBytes) {
-    throw new Error(`Media too large: ${estimatedBytes} bytes (limit: ${params.maxBytes} bytes)`);
-  }
-  const canonicalBase64 = canonicalizeBase64(params.base64);
-  if (!canonicalBase64) {
-    throw new Error("message.send buffer has invalid base64 data");
-  }
-  const buffer = Buffer.from(canonicalBase64, "base64");
-  if (buffer.byteLength > params.maxBytes) {
-    throw new Error(
-      `Media too large: ${buffer.byteLength} bytes (limit: ${params.maxBytes} bytes)`,
-    );
-  }
-  return buffer;
 }
 
 async function hydrateSendBufferMediaParams(params: {
@@ -491,6 +459,7 @@ async function hydrateAttachmentPayload(params: {
   fileHint?: string | null;
   mediaPolicy: AttachmentMediaPolicy;
   optimizeImages?: boolean;
+  validateBase64Buffer?: boolean;
 }) {
   const contentTypeParam = params.contentTypeParam ?? undefined;
   const rawBuffer = readStringParam(params.args, "buffer", { trim: false });
@@ -498,8 +467,21 @@ async function hydrateAttachmentPayload(params: {
     base64: rawBuffer,
     contentType: contentTypeParam ?? undefined,
   });
-  if (normalized.base64 !== rawBuffer && normalized.base64) {
-    params.args.buffer = normalized.base64;
+  if (normalized.base64) {
+    const normalizedBuffer = params.validateBase64Buffer
+      ? canonicalizeBoundedBase64Attachment({
+          base64: normalized.base64,
+          maxBytes:
+            resolveAttachmentMaxBytes({
+              cfg: params.cfg,
+              channel: params.channel,
+              accountId: params.accountId,
+            }) ?? MEDIA_MAX_BYTES,
+        })
+      : normalized.base64;
+    if (normalizedBuffer !== rawBuffer) {
+      params.args.buffer = normalizedBuffer;
+    }
     if (normalized.contentType && !contentTypeParam) {
       params.args.contentType = normalized.contentType;
     }
@@ -624,6 +606,7 @@ async function hydrateAttachmentActionPayload(params: {
   mediaPolicy: AttachmentMediaPolicy;
   optimizeImages?: boolean;
   extraParamKeys?: readonly string[];
+  validateBase64Buffer?: boolean;
 }): Promise<void> {
   const attachmentSource = resolveStructuredAttachmentSource(params.args, params.extraParamKeys);
   const mediaHint = readAttachmentMediaHint(params.args);
@@ -659,6 +642,7 @@ async function hydrateAttachmentActionPayload(params: {
     fileHint: fileHint ?? (attachmentSource?.kind === "file" ? attachmentSource.value : undefined),
     mediaPolicy: params.mediaPolicy,
     optimizeImages: params.optimizeImages,
+    validateBase64Buffer: params.validateBase64Buffer,
   });
 }
 
@@ -713,6 +697,7 @@ export async function hydrateAttachmentParamsForAction(params: {
     extraParamKeys: params.extraParamKeys,
     optimizeImages: shouldHydrateUploadFile && forceDocument ? false : undefined,
     allowMessageCaptionFallback: params.action === "sendAttachment" || shouldHydrateUploadFile,
+    validateBase64Buffer: shouldHydrateUploadFile,
   });
 }
 

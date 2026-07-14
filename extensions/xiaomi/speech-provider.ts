@@ -1,5 +1,5 @@
 // Xiaomi provider module implements model/runtime integration.
-import { transcodeAudioBufferToOpus } from "openclaw/plugin-sdk/media-runtime";
+import { transcodeAudioBufferToOpus } from "openclaw/plugin-sdk/audio-transcode";
 import { resolveTimerTimeoutMs } from "openclaw/plugin-sdk/number-runtime";
 import {
   assertOkOrThrowProviderError,

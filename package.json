@@ -532,6 +532,14 @@
       "types": "./dist/plugin-sdk/media-runtime.d.ts",
       "default": "./dist/plugin-sdk/media-runtime.js"
     },
+    "./plugin-sdk/media-base64": {
+      "types": "./dist/plugin-sdk/media-base64.d.ts",
+      "default": "./dist/plugin-sdk/media-base64.js"
+    },
+    "./plugin-sdk/audio-transcode": {
+      "types": "./dist/plugin-sdk/audio-transcode.d.ts",
+      "default": "./dist/plugin-sdk/audio-transcode.js"
+    },
     "./plugin-sdk/media-store": {
       "types": "./dist/plugin-sdk/media-store.d.ts",
       "default": "./dist/plugin-sdk/media-store.js"

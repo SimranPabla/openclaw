@@ -4,6 +4,7 @@ export {
   detectMime,
   extensionForMime,
   getFileExtension,
+  kindFromMime,
   mimeTypeFromFilePath,
   normalizeMimeType,
 } from "@openclaw/media-core/mime";

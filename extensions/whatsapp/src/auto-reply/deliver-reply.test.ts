@@ -1,9 +1,9 @@
+import { MEDIA_FFMPEG_MAX_AUDIO_DURATION_SECS } from "openclaw/plugin-sdk/audio-transcode";
 // Whatsapp tests cover deliver reply plugin behavior.
 import {
   createMessageReceiptFromOutboundResults,
   listMessageReceiptPlatformIds,
 } from "openclaw/plugin-sdk/channel-outbound";
-import { MEDIA_FFMPEG_MAX_AUDIO_DURATION_SECS } from "openclaw/plugin-sdk/media-runtime";
 import { logVerbose } from "openclaw/plugin-sdk/runtime-env";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { createAcceptedWhatsAppSendResult } from "../inbound/send-result.test-helper.js";
@@ -17,9 +17,9 @@ const hoisted = vi.hoisted(() => ({
   transcodeAudioBufferToOpus: vi.fn(),
 }));
 
-vi.mock("openclaw/plugin-sdk/media-runtime", async () => {
-  const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/media-runtime")>(
-    "openclaw/plugin-sdk/media-runtime",
+vi.mock("openclaw/plugin-sdk/audio-transcode", async () => {
+  const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/audio-transcode")>(
+    "openclaw/plugin-sdk/audio-transcode",
   );
   return {
     ...actual,
