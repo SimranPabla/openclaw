@@ -2,6 +2,11 @@
 import { readBooleanParam } from "openclaw/plugin-sdk/boolean-param";
 import { jsonResult } from "openclaw/plugin-sdk/channel-actions";
 import {
+  canonicalizeBase64,
+  estimateBase64DecodedBytes,
+  parseBase64Source,
+} from "openclaw/plugin-sdk/media-runtime";
+import {
   isWhatsAppGroupJid,
   resolveAuthorizedWhatsAppOutboundTarget,
   resolveWhatsAppAccount,
@@ -74,21 +79,6 @@ function readWhatsAppActionChatJid(params: WhatsAppMessageActionParams): string 
   return normalizeWhatsAppTarget(params.toolContext.currentChannelId) ?? undefined;
 }
 
-function extractBase64Payload(encoded: string): string {
-  const match = /^data:[^;]+;base64,(.*)$/i.exec(encoded.trim());
-  const payload = match?.[1];
-  return payload !== undefined ? payload : encoded;
-}
-
-function estimateBase64DecodedBytes(encoded: string): number {
-  const compact = extractBase64Payload(encoded).replace(/\s/g, "");
-  if (!compact) {
-    return 0;
-  }
-  const padding = compact.endsWith("==") ? 2 : compact.endsWith("=") ? 1 : 0;
-  return Math.max(0, Math.floor((compact.length * 3) / 4) - padding);
-}
-
 function decodeUploadFileMediaPayload(params: {
   args: Record<string, unknown>;
   encoded: string;
@@ -100,8 +90,14 @@ function decodeUploadFileMediaPayload(params: {
       fileName?: string;
     }
   | undefined {
+  const source = parseBase64Source(params.encoded);
+  if (!source) {
+    throw new Error("WhatsApp upload-file buffer must be valid base64 or a base64 data URL.");
+  }
   if (params.maxBytes !== undefined) {
-    const estimatedBytes = estimateBase64DecodedBytes(params.encoded);
+    // Enforce the budget before canonicalization and decode so hostile input cannot force an
+    // oversized Buffer allocation before rejection.
+    const estimatedBytes = estimateBase64DecodedBytes(source.payload);
     if (estimatedBytes > params.maxBytes) {
       throw new Error(
         `WhatsApp upload-file buffer exceeds configured media limit (${estimatedBytes} bytes > ${params.maxBytes} bytes).`,
@@ -112,7 +108,11 @@ function decodeUploadFileMediaPayload(params: {
     readStringParam(params.args, "contentType") ?? readStringParam(params.args, "mimeType");
   const fileName =
     readStringParam(params.args, "filename") ?? readStringParam(params.args, "fileName");
-  const buffer = Buffer.from(extractBase64Payload(params.encoded), "base64");
+  const canonicalPayload = canonicalizeBase64(source.payload);
+  if (!canonicalPayload) {
+    throw new Error("WhatsApp upload-file buffer must be valid base64 or a base64 data URL.");
+  }
+  const buffer = Buffer.from(canonicalPayload, "base64");
   if (params.maxBytes !== undefined && buffer.byteLength > params.maxBytes) {
     throw new Error(
       `WhatsApp upload-file buffer exceeds configured media limit (${buffer.byteLength} bytes > ${params.maxBytes} bytes).`,

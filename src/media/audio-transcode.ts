@@ -13,6 +13,8 @@ const DEFAULT_OPUS_CHANNELS = 1;
 const DEFAULT_TEMP_PREFIX = "audio-opus-";
 const DEFAULT_OUTPUT_FILE_NAME = "voice.opus";
 
+type OpusOutputContainer = "ogg" | "opus";
+
 function normalizeAudioExtension(params: {
   inputExtension?: string;
   inputFileName?: string;
@@ -43,6 +45,24 @@ function normalizeOutputFileName(value?: string): string {
   return DEFAULT_OUTPUT_FILE_NAME;
 }
 
+function resolveOpusOutputContainer(value?: OpusOutputContainer): OpusOutputContainer {
+  const outputContainer = value ?? "opus";
+  if (outputContainer !== "ogg" && outputContainer !== "opus") {
+    throw new Error(`Unsupported Opus output container: ${String(outputContainer)}`);
+  }
+  return outputContainer;
+}
+
+function resolveMaxDurationSeconds(value?: number): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error("maxDurationSeconds must be a positive finite number");
+  }
+  return value;
+}
+
 /** Transcodes arbitrary audio input into mono Opus using a scoped temp workspace. */
 export async function transcodeAudioBufferToOpus(params: {
   audioBuffer: Buffer;
@@ -54,7 +74,13 @@ export async function transcodeAudioBufferToOpus(params: {
   sampleRateHz?: number;
   bitrate?: string;
   channels?: number;
+  /** Output muxer for the encoded Opus stream. Defaults to raw Opus. */
+  outputContainer?: OpusOutputContainer;
+  /** Maximum output duration passed to ffmpeg's `-t` option. */
+  maxDurationSeconds?: number;
 }): Promise<Buffer> {
+  const outputContainer = resolveOpusOutputContainer(params.outputContainer);
+  const maxDurationSeconds = resolveMaxDurationSeconds(params.maxDurationSeconds);
   return await withTempWorkspace(
     {
       rootDir: resolvePreferredOpenClawTmpDir(),
@@ -81,6 +107,7 @@ export async function transcodeAudioBufferToOpus(params: {
               "-vn",
               "-sn",
               "-dn",
+              ...(maxDurationSeconds === undefined ? [] : ["-t", String(maxDurationSeconds)]),
               "-c:a",
               "libopus",
               "-b:a",
@@ -90,7 +117,7 @@ export async function transcodeAudioBufferToOpus(params: {
               "-ac",
               String(params.channels ?? DEFAULT_OPUS_CHANNELS),
               "-f",
-              "opus",
+              outputContainer,
               outputPath,
             ],
             { timeoutMs: params.timeoutMs },
