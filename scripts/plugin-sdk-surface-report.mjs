@@ -226,7 +226,7 @@ export function readPluginSdkSurfaceBudgets(env = process.env) {
     // Its length-prefixed segment encoder and scope-key builder add two functions, also mirrored.
     // The focused HTML entity runtime and quote-aware HTML tokenizer add one public function each.
     // Plugin service Gateway event scope and emitter types add four facade exports.
-    // The focused base64 facade adds four exports, including three functions; media-mime adds one.
+    // media-mime adds the canonical kindFromMime classifier.
     publicExports: readPluginSdkSurfaceBudgetEnv(
       "OPENCLAW_PLUGIN_SDK_MAX_PUBLIC_EXPORTS",
       // +4: registerMcpServerConnectionResolver context/result/resolver/registration types (#106229).
