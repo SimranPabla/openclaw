@@ -7,7 +7,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 
 const transcodeAudioBufferToOpusMock = vi.hoisted(() => vi.fn());
 
-vi.mock("openclaw/plugin-sdk/audio-transcode", () => ({
+vi.mock("openclaw/plugin-sdk/media-runtime", () => ({
   transcodeAudioBufferToOpus: transcodeAudioBufferToOpusMock,
 }));
 
@@ -115,7 +115,7 @@ describe("Google speech provider", () => {
   });
 
   afterAll(() => {
-    vi.doUnmock("openclaw/plugin-sdk/audio-transcode");
+    vi.doUnmock("openclaw/plugin-sdk/media-runtime");
     vi.resetModules();
   });
 
