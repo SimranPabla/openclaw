@@ -497,7 +497,6 @@ SDK.
   | `plugin-sdk/keyed-async-queue` | Ordered async queue | `KeyedAsyncQueue` |
   | `plugin-sdk/media-runtime` | Deprecated broad media helpers | Use focused media subpaths for new plugin code |
   | `plugin-sdk/media-base64` | Base64 media-source helpers | Strict source parsing, decoded-size estimation, and canonicalization |
-  | `plugin-sdk/audio-transcode` | Audio transcode helpers | Scoped Opus transcoding with typed output-container and duration options |
   | `plugin-sdk/media-mime` | Media MIME helpers | MIME normalization, detection, extension mapping, and media-kind classification |
   | `plugin-sdk/media-store` | Media store helpers | Bounded media buffer, stream, and remote-response persistence |
   | `plugin-sdk/media-generation-runtime` | Shared media-generation helpers | Shared failover helpers, candidate selection, and missing-model messaging for image/video/music generation |
