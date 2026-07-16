@@ -25,7 +25,7 @@ import { loadWebMedia } from "../../media/web-media.js";
 import { resolveSnakeCaseParamKey } from "../../param-key.js";
 import { readBooleanParam as readBooleanParamShared } from "../../plugin-sdk/boolean-param.js";
 import {
-  canonicalizeBoundedBase64Attachment,
+  canonicalizeBase64Attachment,
   decodeBoundedBase64Attachment,
   normalizeBase64Payload,
 } from "./message-action-base64.js";
@@ -469,14 +469,13 @@ async function hydrateAttachmentPayload(params: {
   });
   if (normalized.base64) {
     const normalizedBuffer = params.validateBase64Buffer
-      ? canonicalizeBoundedBase64Attachment({
+      ? canonicalizeBase64Attachment({
           base64: normalized.base64,
-          maxBytes:
-            resolveAttachmentMaxBytes({
-              cfg: params.cfg,
-              channel: params.channel,
-              accountId: params.accountId,
-            }) ?? MEDIA_MAX_BYTES,
+          maxBytes: resolveAttachmentMaxBytes({
+            cfg: params.cfg,
+            channel: params.channel,
+            accountId: params.accountId,
+          }),
         })
       : normalized.base64;
     if (normalizedBuffer !== rawBuffer) {

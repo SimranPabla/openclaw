@@ -5,7 +5,7 @@ import {
   canonicalizeBase64,
   estimateBase64DecodedBytes,
   parseBase64Source,
-} from "openclaw/plugin-sdk/media-runtime";
+} from "openclaw/plugin-sdk/media-base64";
 import {
   isWhatsAppGroupJid,
   resolveAuthorizedWhatsAppOutboundTarget,

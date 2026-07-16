@@ -22,13 +22,15 @@ export function normalizeBase64Payload(params: { base64?: string; contentType?: 
   };
 }
 
-export function canonicalizeBoundedBase64Attachment(params: {
+export function canonicalizeBase64Attachment(params: {
   base64: string;
-  maxBytes: number;
+  maxBytes?: number;
 }): string {
-  const estimatedBytes = estimateBase64DecodedBytes(params.base64);
-  if (estimatedBytes > params.maxBytes) {
-    throw new Error(`Media too large: ${estimatedBytes} bytes (limit: ${params.maxBytes} bytes)`);
+  if (params.maxBytes !== undefined) {
+    const estimatedBytes = estimateBase64DecodedBytes(params.base64);
+    if (estimatedBytes > params.maxBytes) {
+      throw new Error(`Media too large: ${estimatedBytes} bytes (limit: ${params.maxBytes} bytes)`);
+    }
   }
   const canonicalBase64 = canonicalizeBase64(params.base64);
   if (!canonicalBase64) {
@@ -41,7 +43,7 @@ export function decodeBoundedBase64Attachment(params: {
   base64: string;
   maxBytes: number;
 }): Buffer {
-  const canonicalBase64 = canonicalizeBoundedBase64Attachment(params);
+  const canonicalBase64 = canonicalizeBase64Attachment(params);
   const buffer = Buffer.from(canonicalBase64, "base64");
   if (buffer.byteLength > params.maxBytes) {
     throw new Error(

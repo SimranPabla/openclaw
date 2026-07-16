@@ -1,5 +1,6 @@
 // Whatsapp tests cover channel react action plugin behavior.
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ResolvedWhatsAppAccount } from "./accounts.js";
 import { handleWhatsAppMessageAction } from "./channel-react-action.js";
 import type { OpenClawConfig } from "./runtime-api.js";
 
@@ -17,8 +18,15 @@ const hoisted = vi.hoisted(() => ({
       accountId: accountId ?? "default",
     }),
   ),
-  resolveWhatsAppAccount: vi.fn(() => ({ accountId: "default", mediaMaxMb: 50 })),
-  resolveWhatsAppMediaMaxBytes: vi.fn(() => 50 * 1024 * 1024),
+  resolveWhatsAppAccount: vi.fn(
+    (): Pick<ResolvedWhatsAppAccount, "accountId" | "mediaMaxMb"> => ({
+      accountId: "default",
+      mediaMaxMb: 50,
+    }),
+  ),
+  resolveWhatsAppMediaMaxBytes: vi.fn(
+    (_account: Pick<ResolvedWhatsAppAccount, "mediaMaxMb">) => 50 * 1024 * 1024,
+  ),
   sendMessageWhatsApp: vi.fn(async () => ({
     messageId: "msg-media-1",
     toJid: "1555@s.whatsapp.net",
@@ -238,6 +246,41 @@ describe("whatsapp react action messageId resolution", () => {
       forceDocument: true,
       accountId: "default",
     });
+  });
+
+  it("accepts upload buffers between the generic and WhatsApp default limits", async () => {
+    const { resolveWhatsAppMediaMaxBytes } =
+      await vi.importActual<typeof import("./accounts.js")>("./accounts.js");
+    const encoded = "A".repeat(8 * 1024 * 1024);
+    hoisted.resolveWhatsAppAccount.mockReturnValueOnce({
+      accountId: "default",
+      mediaMaxMb: undefined,
+    });
+    hoisted.resolveWhatsAppMediaMaxBytes.mockImplementationOnce(resolveWhatsAppMediaMaxBytes);
+
+    await handleWhatsAppMessageAction({
+      action: "upload-file",
+      params: {
+        to: "+1555",
+        buffer: encoded,
+        contentType: "application/octet-stream",
+        filename: "six-megabytes.bin",
+      },
+      cfg: baseCfg,
+      accountId: "default",
+    });
+
+    expect(hoisted.sendMessageWhatsApp).toHaveBeenCalledWith(
+      "+1555",
+      "",
+      expect.objectContaining({
+        mediaPayload: {
+          buffer: expect.objectContaining({ byteLength: 6 * 1024 * 1024 }),
+          contentType: "application/octet-stream",
+          fileName: "six-megabytes.bin",
+        },
+      }),
+    );
   });
 
   it.each([

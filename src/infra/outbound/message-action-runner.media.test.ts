@@ -831,6 +831,28 @@ describe("runMessageAction media behavior", () => {
       });
     });
 
+    it("leaves default-config upload-file limits to the channel owner", async () => {
+      const encoded = "A".repeat(8 * 1024 * 1024);
+
+      const result = await runMessageAction({
+        cfg,
+        action: "upload-file",
+        params: {
+          channel: "attachmentchat",
+          target: "+15551234567",
+          buffer: encoded,
+          contentType: "application/octet-stream",
+          filename: "six-megabytes.bin",
+        },
+      });
+
+      expect(requireActionPayload(result)).toMatchObject({
+        buffer: encoded,
+        contentType: "application/octet-stream",
+        filename: "six-megabytes.bin",
+      });
+    });
+
     it.each([
       "data:text/plain,hello",
       "data:text/plain;base64",

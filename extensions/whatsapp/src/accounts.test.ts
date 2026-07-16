@@ -2,10 +2,12 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_WHATSAPP_MEDIA_MAX_MB,
   listWhatsAppAccountIds,
   resolveDefaultWhatsAppAccountId,
   resolveWhatsAppAccount,
   resolveWhatsAppAuthDir,
+  resolveWhatsAppMediaMaxBytes,
 } from "./accounts.js";
 
 describe("resolveWhatsAppAuthDir", () => {
@@ -201,5 +203,13 @@ describe("resolveWhatsAppAuthDir", () => {
     });
 
     expect(resolved.selfChatMode).toBeUndefined();
+  });
+});
+
+describe("resolveWhatsAppMediaMaxBytes", () => {
+  it("uses the WhatsApp-owned default when no account limit is configured", () => {
+    expect(resolveWhatsAppMediaMaxBytes({ mediaMaxMb: undefined })).toBe(
+      DEFAULT_WHATSAPP_MEDIA_MAX_MB * 1024 * 1024,
+    );
   });
 });
