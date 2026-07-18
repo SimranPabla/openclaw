@@ -290,7 +290,8 @@ export function readPluginSdkSurfaceBudgets(env = process.env) {
       // channel-outbound and its two compatibility barrels.
       // Net +1: public session catalog locator types after the protocol cleanup harvest.
       // +2: lifecycle-owned prepared model catalog sync and async readers.
-      8192,
+      // +2: indexed transcript write-lock context and runner.
+      8194,
       env,
     ),
     publicFunctionExports: readPluginSdkSurfaceBudgetEnv(
@@ -339,7 +340,8 @@ export function readPluginSdkSurfaceBudgets(env = process.env) {
       // +1: config-backed main-session resolver for Gateway-hosted plugin services.
       // +6: outbound echo record/query helpers across channel-outbound and mirrors.
       // +2: lifecycle-owned prepared model catalog sync and async readers.
-      4557,
+      // +1: indexed transcript write-lock runner.
+      4558,
       env,
     ),
     publicDeprecatedExports: readPluginSdkSurfaceBudgetEnv(
