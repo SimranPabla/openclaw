@@ -199,7 +199,9 @@ export async function confirmConversationResetForCurrentSession(
   const resetSessionKey = target?.sessionKey ?? host.sessionKey;
   const targetIsCurrent = target
     ? () => visibleSessionMatches(host, target.sessionKey, target.agentId)
-    : () => areUiSessionKeysEquivalent(host.sessionKey, resetSessionKey);
+    : () =>
+        host.sessionKey === resetSessionKey ||
+        areUiSessionKeysEquivalent(host.sessionKey, resetSessionKey);
   if (!targetIsCurrent()) {
     return "deferred";
   }
