@@ -539,6 +539,7 @@ export function createOpenClawTools(
           createShowWidgetTool({
             sessionId: options?.sessionId,
             agentId: sessionAgentId,
+            agentSessionKey: options?.runSessionKey ?? options?.agentSessionKey,
           }),
         ]),
     ...collectPresentOpenClawTools([heartbeatTool]),
