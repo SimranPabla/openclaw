@@ -952,7 +952,6 @@ describe("deliverWebReply", () => {
       inputFileName: "voice.mp3",
       tempPrefix: "whatsapp-voice-",
       outputFileName: "voice.ogg",
-      outputContainer: "ogg",
       maxDurationSeconds: MEDIA_FFMPEG_MAX_AUDIO_DURATION_SECS,
       sampleRateHz: 48000,
       channels: 1,

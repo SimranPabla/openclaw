@@ -105,7 +105,7 @@ describe("transcodeAudioBufferToOpus", () => {
     });
   });
 
-  it("writes Ogg Opus with a maximum duration when requested", async () => {
+  it("passes the maximum duration to ffmpeg when requested", async () => {
     runFfmpegMock.mockImplementationOnce(async (args: string[]) => {
       const outputPath = args.at(-1);
       if (!outputPath) {
@@ -116,13 +116,11 @@ describe("transcodeAudioBufferToOpus", () => {
 
     await transcodeAudioBufferToOpus({
       audioBuffer: Buffer.from("source-m4a"),
-      outputContainer: "ogg",
       maxDurationSeconds: 300,
     });
 
     const ffmpegArgs = firstMockCall(runFfmpegMock, "runFfmpeg")[0] as string[];
     expect(ffmpegArgs).toEqual(expect.arrayContaining(["-t", "300", "-c:a", "libopus"]));
-    expect(ffmpegArgs.slice(-3, -1)).toEqual(["-f", "ogg"]);
   });
 
   it("keeps temp prefixes and output names inside the preferred temp root", async () => {

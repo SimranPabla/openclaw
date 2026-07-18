@@ -204,7 +204,6 @@ async function transcodeToWhatsAppVoiceOpus(params: {
     inputFileName: params.fileName,
     tempPrefix: "whatsapp-voice-",
     outputFileName: WHATSAPP_VOICE_FILE_NAME,
-    outputContainer: "ogg",
     maxDurationSeconds: MEDIA_FFMPEG_MAX_AUDIO_DURATION_SECS,
     sampleRateHz: WHATSAPP_VOICE_SAMPLE_RATE_HZ,
     channels: 1,
