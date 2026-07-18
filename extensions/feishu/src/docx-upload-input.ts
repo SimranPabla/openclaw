@@ -4,8 +4,8 @@ import { basename, isAbsolute, resolve } from "node:path";
 import {
   canonicalizeBase64,
   estimateBase64DecodedBytes,
-} from "openclaw/plugin-sdk/media-base64";
-import { extensionForMime } from "openclaw/plugin-sdk/media-mime";
+  extensionForMime,
+} from "openclaw/plugin-sdk/media-runtime";
 import { getFeishuRuntime } from "./runtime.js";
 
 type DocxUploadInput = {

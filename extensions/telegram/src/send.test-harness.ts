@@ -1,9 +1,9 @@
 // Telegram plugin module implements send harness behavior.
 import { resolveMarkdownTableMode } from "openclaw/plugin-sdk/markdown-table-runtime";
-import { kindFromMime } from "openclaw/plugin-sdk/media-mime";
 import {
   buildOutboundMediaLoadOptions,
   isGifMedia,
+  kindFromMime,
   normalizePollInput,
 } from "openclaw/plugin-sdk/media-runtime";
 import type { MockFn } from "openclaw/plugin-sdk/plugin-test-runtime";

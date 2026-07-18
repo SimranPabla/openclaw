@@ -1,6 +1,6 @@
 // Deepinfra provider module implements model/runtime integration.
-import { canonicalizeBase64 } from "openclaw/plugin-sdk/media-base64";
 import { extensionForMime } from "openclaw/plugin-sdk/media-mime";
+import { canonicalizeBase64 } from "openclaw/plugin-sdk/media-runtime";
 import { isProviderApiKeyConfigured } from "openclaw/plugin-sdk/provider-auth";
 import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runtime";
 import {
