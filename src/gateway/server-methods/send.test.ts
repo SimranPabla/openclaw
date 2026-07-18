@@ -12,7 +12,6 @@ import {
 import { jsonResult } from "../../agents/tools/common.js";
 import type { ChannelPlugin } from "../../channels/plugins/types.public.js";
 import type { SessionTranscriptAppendResult } from "../../config/sessions/transcript.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { setActivePluginRegistry } from "../../plugins/runtime.js";
 import { AGENT_HARNESS_SESSION_KEY_RESERVED_MESSAGE } from "../../sessions/agent-harness-session-key.js";
 import { createTestRegistry } from "../../test-utils/channel-plugins.js";
@@ -207,10 +206,10 @@ async function loadSendHandlersForTest() {
   ({ sendHandlers } = await import("./send.js"));
 }
 
-const makeContext = (config: OpenClawConfig = {}): GatewayRequestContext =>
+const makeContext = (): GatewayRequestContext =>
   ({
     dedupe: new Map(),
-    getRuntimeConfig: () => config,
+    getRuntimeConfig: () => ({}),
   }) as unknown as GatewayRequestContext;
 
 async function runSend(params: Record<string, unknown>) {
@@ -287,7 +286,6 @@ async function runMessageActionRequest(
       };
     };
   } | null,
-  config: OpenClawConfig = {},
 ) {
   const respond = vi.fn();
   const sessionKey = typeof params.sessionKey === "string" ? params.sessionKey : undefined;
@@ -333,7 +331,7 @@ async function runMessageActionRequest(
   )({
     params: params as never,
     respond,
-    context: makeContext(config),
+    context: makeContext(),
     req: { type: "req", id: "1", method: "message.action" },
     client: (effectiveClient ?? null) as never,
     isWebchatConnect: () => false,
@@ -3551,94 +3549,6 @@ describe("gateway send mirroring", () => {
         "gateway bytes",
       );
     });
-  });
-
-  it.each(["data:text/plain,hello", "data:text/plain;base64"])(
-    "rejects malformed upload-file data URLs before plugin dispatch: %s",
-    async (buffer) => {
-      const { respond } = await runMessageActionRequest({
-        channel: "imessage",
-        action: "upload-file",
-        params: { to: "chat-123", buffer },
-        idempotencyKey: `idem-upload-file-malformed-${buffer.length}`,
-      });
-
-      expect(firstRespondCall(respond)[0]).toBe(false);
-      expect(firstRespondCall(respond)[2]?.message).toContain("invalid base64 data");
-      expect(mocks.dispatchChannelMessageAction).not.toHaveBeenCalled();
-    },
-  );
-
-  it("canonicalizes whitespace-heavy upload-file data URLs before plugin dispatch", async () => {
-    const { respond } = await runMessageActionRequest({
-      channel: "imessage",
-      action: "upload-file",
-      params: {
-        to: "chat-123",
-        buffer: " \n DATA:text/plain;charset=utf-8;BASE64, SGV s\nbG8= \n ",
-        contentType: "application/octet-stream",
-      },
-      idempotencyKey: "idem-upload-file-canonical-base64",
-    });
-
-    expect(firstRespondCall(respond)[0]).toBe(true);
-    expect(lastDispatchChannelMessageActionCall()?.params).toMatchObject({
-      buffer: "SGVsbG8=",
-      contentType: "application/octet-stream",
-    });
-  });
-
-  it("does not apply the generic 5 MiB send limit to upload-file actions", async () => {
-    const { respond } = await runMessageActionRequest({
-      channel: "imessage",
-      action: "upload-file",
-      params: {
-        to: "chat-123",
-        buffer: "A".repeat(8 * 1024 * 1024),
-        contentType: "application/octet-stream",
-      },
-      idempotencyKey: "idem-upload-file-default-limit",
-    });
-
-    expect(firstRespondCall(respond)[0]).toBe(true);
-    expect(lastDispatchChannelMessageActionCall()?.params.buffer).toHaveLength(8 * 1024 * 1024);
-  });
-
-  it("enforces an explicit upload-file account limit before plugin dispatch", async () => {
-    const bufferFromSpy = vi.spyOn(Buffer, "from");
-    try {
-      const { respond } = await runMessageActionRequest(
-        {
-          channel: "imessage",
-          action: "upload-file",
-          accountId: "limited",
-          params: {
-            to: "chat-123",
-            buffer: "SGVsbG8=",
-            contentType: "text/plain",
-          },
-          idempotencyKey: "idem-upload-file-explicit-limit",
-        },
-        undefined,
-        {
-          channels: {
-            imessage: {
-              mediaMaxMb: 10,
-              accounts: {
-                limited: { mediaMaxMb: 1 / (1024 * 1024) },
-              },
-            },
-          },
-        },
-      );
-
-      expect(firstRespondCall(respond)[0]).toBe(false);
-      expect(firstRespondCall(respond)[2]?.message).toContain("Media too large");
-      expect(mocks.dispatchChannelMessageAction).not.toHaveBeenCalled();
-      expect(bufferFromSpy).not.toHaveBeenCalledWith(expect.anything(), "base64");
-    } finally {
-      bufferFromSpy.mockRestore();
-    }
   });
 });
 /* oxlint-disable max-lines -- TODO: split this grandfathered oversized file. */

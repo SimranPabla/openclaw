@@ -4,8 +4,7 @@ import { jsonResult } from "openclaw/plugin-sdk/channel-actions";
 import {
   canonicalizeBase64,
   estimateBase64DecodedBytes,
-  parseBase64Source,
-} from "openclaw/plugin-sdk/media-base64";
+} from "openclaw/plugin-sdk/media-runtime";
 import {
   isWhatsAppGroupJid,
   resolveAuthorizedWhatsAppOutboundTarget,
@@ -79,6 +78,11 @@ function readWhatsAppActionChatJid(params: WhatsAppMessageActionParams): string 
   return normalizeWhatsAppTarget(params.toolContext.currentChannelId) ?? undefined;
 }
 
+function extractBase64Payload(encoded: string): string {
+  const match = /^data:[^;]+;base64,(.*)$/is.exec(encoded.trim());
+  return match?.[1] ?? encoded;
+}
+
 function decodeUploadFileMediaPayload(params: {
   args: Record<string, unknown>;
   encoded: string;
@@ -90,14 +94,11 @@ function decodeUploadFileMediaPayload(params: {
       fileName?: string;
     }
   | undefined {
-  const source = parseBase64Source(params.encoded);
-  if (!source) {
-    throw new Error("WhatsApp upload-file buffer must be valid base64 or a base64 data URL.");
-  }
+  const payload = extractBase64Payload(params.encoded);
   if (params.maxBytes !== undefined) {
     // Enforce the budget before canonicalization and decode so hostile input cannot force an
     // oversized Buffer allocation before rejection.
-    const estimatedBytes = estimateBase64DecodedBytes(source.payload);
+    const estimatedBytes = estimateBase64DecodedBytes(payload);
     if (estimatedBytes > params.maxBytes) {
       throw new Error(
         `WhatsApp upload-file buffer exceeds configured media limit (${estimatedBytes} bytes > ${params.maxBytes} bytes).`,
@@ -108,7 +109,7 @@ function decodeUploadFileMediaPayload(params: {
     readStringParam(params.args, "contentType") ?? readStringParam(params.args, "mimeType");
   const fileName =
     readStringParam(params.args, "filename") ?? readStringParam(params.args, "fileName");
-  const canonicalPayload = canonicalizeBase64(source.payload);
+  const canonicalPayload = canonicalizeBase64(payload);
   if (!canonicalPayload) {
     throw new Error("WhatsApp upload-file buffer must be valid base64 or a base64 data URL.");
   }

@@ -541,15 +541,13 @@ export const sendHandlers: GatewayRequestHandlers = {
           normalizeOptionalString(request.agentId) ??
           (sessionKey ? resolveSessionAgentId({ sessionKey, config: cfg }) : undefined);
         const accountId = normalizeOptionalString(request.accountId) ?? undefined;
-        if (request.action === "send" || request.action === "upload-file") {
-          // Direct Gateway calls bypass the runner's buffer hydration. Keep path-based attachment
-          // actions plugin-owned; they receive scoped roots in the dispatch context below.
+        if (request.action === "send") {
           await hydrateAttachmentParamsForAction({
             cfg,
             channel,
             accountId,
             args: request.params,
-            action: request.action,
+            action: "send",
             mediaPolicy: resolveAttachmentMediaPolicy({
               mediaLocalRoots: getAgentScopedMediaLocalRoots(cfg, agentId),
             }),
