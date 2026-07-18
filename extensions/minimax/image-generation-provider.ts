@@ -3,7 +3,8 @@ import {
   resolveInlineImageJsonResponseMaxBytes,
   type ImageGenerationProvider,
 } from "openclaw/plugin-sdk/image-generation";
-import { canonicalizeBase64, MAX_IMAGE_BYTES } from "openclaw/plugin-sdk/media-runtime";
+import { canonicalizeBase64 } from "openclaw/plugin-sdk/media-base64";
+import { MAX_IMAGE_BYTES } from "openclaw/plugin-sdk/media-runtime";
 import { isProviderApiKeyConfigured } from "openclaw/plugin-sdk/provider-auth";
 import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runtime";
 import {
