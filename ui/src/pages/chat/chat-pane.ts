@@ -323,6 +323,20 @@ const WORKSPACE_RAIL_MAX_WIDTH = 280;
 // below this the detail panel stacks under the thread.
 const DETAIL_SIDEBAR_SIDE_MIN_WIDTH = 680;
 
+export function resolveBoardChatLayoutWidth(params: {
+  paneWidth: number;
+  hasBoard: boolean;
+  face: BoardFace;
+  dock: BoardTab["chatDock"];
+  dockWidth: number;
+}): number {
+  return params.hasBoard &&
+    params.face === "dashboard" &&
+    (params.dock === "left" || params.dock === "right")
+    ? Math.min(params.paneWidth, params.dockWidth)
+    : params.paneWidth;
+}
+
 const NEW_SESSION_ACTIVE_RUN_MESSAGE =
   "Start a new thread after the active run or queued messages finish.";
 const NEW_SESSION_LIST_LOADING_MESSAGE =
@@ -1481,7 +1495,16 @@ class ChatPane extends OpenClawLightDomElement {
       this.state?.sessionKey ?? this.sessionKey,
       this.context?.gateway.snapshot.hello,
     );
-    return this.boardProvider ?? boardProviderForSession(sessionKey);
+    if (this.boardProvider) {
+      return this.boardProvider;
+    }
+    const gateway = this.context?.gateway.snapshot;
+    return boardProviderForSession(
+      sessionKey,
+      gateway?.client,
+      !gateway || isGatewayMethodAdvertised(gateway, "board.get") !== false,
+      gateway?.connected ?? false,
+    );
   }
 
   private resolveBoardSessionKey(snapshotSessionKey = ""): string {
@@ -2772,9 +2795,16 @@ class ChatPane extends OpenClawLightDomElement {
           ? t("chat.catalog.remoteViewOnly")
           : t("chat.catalog.unsupportedViewOnly")
         : null;
+    const chatLayoutWidth = resolveBoardChatLayoutWidth({
+      paneWidth: this.paneWidth,
+      hasBoard: board.hasBoard,
+      face: board.face,
+      dock: board.dock,
+      dockWidth: this.boardChatDockSize.width,
+    });
     const sessionWorkspace = createSessionWorkspaceProps(state, {
       draftScope: this.paneId,
-      narrowLayout: this.paneWidth < WORKSPACE_RAIL_SIDE_MIN_PANE_WIDTH,
+      narrowLayout: chatLayoutWidth < WORKSPACE_RAIL_SIDE_MIN_PANE_WIDTH,
     });
     const railSideDocked =
       !sessionWorkspace.collapsed &&
@@ -2784,7 +2814,7 @@ class ChatPane extends OpenClawLightDomElement {
     // room for both columns before it may side-dock next to it.
     const backgroundTasks = createBackgroundTasksProps(state, {
       narrowLayout:
-        this.paneWidth <
+        chatLayoutWidth <
         WORKSPACE_RAIL_SIDE_MIN_PANE_WIDTH + (railSideDocked ? WORKSPACE_RAIL_MAX_WIDTH : 0),
       onOpenSession: (sessionKey) => {
         this.onPaneSessionChange?.(this.paneId, sessionKey);
@@ -2794,7 +2824,7 @@ class ChatPane extends OpenClawLightDomElement {
     // Every side-docked rail narrows the room left for the chat + detail
     // split; bottom strips do not.
     const sideRailCount = (railSideDocked ? 1 : 0) + (tasksSideDocked ? 1 : 0);
-    const detailSplitWidth = this.paneWidth - sideRailCount * WORKSPACE_RAIL_MAX_WIDTH;
+    const detailSplitWidth = chatLayoutWidth - sideRailCount * WORKSPACE_RAIL_MAX_WIDTH;
     const props: ChatProps = {
       transcript: this.transcript,
       paneId: this.paneId,
@@ -3062,6 +3092,7 @@ class ChatPane extends OpenClawLightDomElement {
       sidebarStacked: detailSplitWidth < DETAIL_SIDEBAR_SIDE_MIN_WIDTH,
       splitRatio: state.splitRatio,
       canvasPluginSurfaceUrl: state.hello?.pluginSurfaceUrls?.canvas ?? null,
+      boardProvider: board.provider,
       onOpenSidebar: state.handleOpenSidebar,
       onCloseSidebar: state.handleCloseSidebar,
       onSplitRatioChange: state.handleSplitRatioChange,
@@ -3096,7 +3127,9 @@ class ChatPane extends OpenClawLightDomElement {
                 this.boardCommandDock = null;
                 this.persistBoardSessionView({ face: "dashboard", activeTabId: tabId });
               },
+              frameLoadFailed: (name) => board.provider.refreshWidgetFrame(name),
             } satisfies BoardViewCallbacks,
+            widgetFrameUrl: (name, revision) => board.provider.widgetFrameUrl(name, revision),
             onDockChange: (dock) => this.handleBoardDockChange(dock),
           })
         : chat;

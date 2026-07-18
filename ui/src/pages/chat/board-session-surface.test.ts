@@ -22,10 +22,7 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-  const marker = document.createElement("script");
-  marker.dataset.openclawControlUiMockGateway = "";
-  document.head.append(marker);
-  containers.push(marker);
+  window.history.replaceState({}, "", "/?mockBoard=1");
 });
 
 describe("board session shell", () => {
@@ -77,6 +74,7 @@ describe("board session shell", () => {
           grant: (name, decision) => provider.grant(name, decision),
           selectTab: () => {},
         },
+        widgetFrameUrl: (name, revision) => provider.widgetFrameUrl(name, revision),
         onDockChange: () => {},
       }),
       container,
@@ -106,6 +104,7 @@ describe("board session shell", () => {
           grant: (name, decision) => provider.grant(name, decision),
           selectTab: () => {},
         },
+        widgetFrameUrl: (name, revision) => provider.widgetFrameUrl(name, revision),
         onDockChange,
       }),
       container,
@@ -133,6 +132,7 @@ describe("board session shell", () => {
         grant: (...args: Parameters<typeof provider.grant>) => provider.grant(...args),
         selectTab: () => {},
       },
+      widgetFrameUrl: (name: string, revision: number) => provider.widgetFrameUrl(name, revision),
       onDockChange: () => {},
     };
 

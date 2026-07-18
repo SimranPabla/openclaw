@@ -203,6 +203,9 @@ class OpenClawBoardView extends OpenClawLightDomElement {
     focusChanged: (name) => {
       this.focusName = name;
     },
+    frameLoadFailed: async (name) => {
+      await this.callbacks?.frameLoadFailed?.(name);
+    },
   };
 
   private beginGesture(

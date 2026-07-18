@@ -12,6 +12,7 @@ import type { QuestionPrompt } from "../../app/question-prompt.ts";
 import type { ChatSendShortcut } from "../../app/settings.ts";
 import { icons } from "../../components/icons.ts";
 import { t } from "../../i18n/index.ts";
+import type { BoardProvider } from "../../lib/board/provider.ts";
 import type {
   ChatAttachment,
   ChatQueueItem,
@@ -132,6 +133,7 @@ export type ChatProps = {
   sidebarStacked?: boolean;
   splitRatio?: number;
   canvasPluginSurfaceUrl?: string | null;
+  boardProvider?: BoardProvider;
   embedSandboxMode?: EmbedSandboxMode;
   allowExternalEmbedUrls?: boolean;
   chatMessageMaxWidth?: string | null;
@@ -324,6 +326,7 @@ export function renderChat(props: ChatProps) {
       questionPrompts: props.gatewayQuestionPrompts,
       sessions: props.sessions,
       sessionHost: props.sessionHost,
+      boardProvider: props.boardProvider,
       assistantName: props.assistantName,
       assistantAvatar: props.assistantAvatar,
       assistantAvatarUrl: props.assistantAvatarUrl,

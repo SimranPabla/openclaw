@@ -13,6 +13,7 @@ import {
 } from "../../../components/markdown.ts";
 import { t } from "../../../i18n/index.ts";
 import type { AssistantIdentity } from "../../../lib/assistant-identity.ts";
+import type { BoardProvider } from "../../../lib/board/provider.ts";
 import type {
   ChatItem,
   MessageContentItem,
@@ -765,6 +766,7 @@ type RenderMessageGroupOptions = {
   onOpenSidebar?: (content: SidebarContent) => void;
   onOpenWorkspaceFile?: (target: { path: string; line?: number | null }) => void;
   sessionKey?: string;
+  boardProvider?: BoardProvider;
   agentId?: string;
   showReasoning: boolean;
   showToolCalls?: boolean;
@@ -803,6 +805,7 @@ function buildGroupedMessageRenderOptions(
   return {
     isStreaming: group.isStreaming && index === group.messages.length - 1,
     sessionKey: opts.sessionKey,
+    boardProvider: opts.boardProvider,
     agentId: opts.agentId,
     entryId: persistedMessageEntryId(item.message) ?? undefined,
     onOpenWorkspaceFile: opts.onOpenWorkspaceFile,
@@ -2302,6 +2305,7 @@ function renderGroupedMessage(
   opts: {
     isStreaming: boolean;
     sessionKey?: string;
+    boardProvider?: BoardProvider;
     agentId?: string;
     duplicateCount?: number;
     showReasoning: boolean;
@@ -2442,6 +2446,7 @@ function renderGroupedMessage(
             onOpenSidebar,
             rawText: block.rawText ?? null,
             canvasPluginSurfaceUrl: opts.canvasPluginSurfaceUrl,
+            boardProvider: opts.boardProvider,
             embedSandboxMode: opts.embedSandboxMode ?? "scripts",
             sessionKey: opts.sessionKey,
           })}
