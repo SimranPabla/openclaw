@@ -108,7 +108,7 @@ function ownerInstallIsNewerThanRefs(
 
 type ClawPackagePreflightResult =
   | { ok: true; action: "install" | "reuse"; integrity: string; installId?: string }
-  | { ok: false; code: string; message: string };
+  | { ok: false; code: string; message: string; installedVersion?: string };
 
 export async function preflightClawPackage(
   pkg: ClawPackage,
@@ -132,6 +132,9 @@ export async function preflightClawPackage(
     return {
       ok: false,
       code: result.code,
+      ...(result.code === "plugin_version_conflict"
+        ? { installedVersion: result.installedVersion }
+        : {}),
       message:
         result.code === "plugin_version_conflict"
           ? `Plugin ${pkg.ref}@${pkg.version} conflicts with installed version ${result.installedVersion}.`
