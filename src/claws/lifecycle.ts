@@ -25,7 +25,7 @@ import {
 
 const AGENT_ID_PATTERN = /^[a-z][a-z0-9_-]{0,63}$/;
 
-type ClawAddPlanContext = {
+export type ClawAddPlanContext = {
   agentId?: string;
   workspace?: string;
   resumableWorkspace?: string;

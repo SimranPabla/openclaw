@@ -30,7 +30,7 @@ export class ClawPackageInstallError extends Error {
   }
 }
 
-type PackageInstallerDeps = {
+export type PackageInstallerDeps = {
   installPlugin?: typeof runPluginInstallCommand;
   uninstallPlugin?: typeof runPluginUninstallCommand;
   installSkill?: typeof installSkillFromClawHub;
@@ -180,6 +180,7 @@ export async function installClawPackages(
     deps?: PackageInstallerDeps;
     runtime?: RuntimeEnv;
     nowMs?: number;
+    onExternalMutation?: (pkg: ClawPackage) => void;
   } = {},
 ): Promise<PersistedClawPackageRef[]> {
   const deps = options.deps ?? {};
@@ -352,6 +353,9 @@ export async function installClawPackages(
       });
       installedPackages.push(packageRef);
 
+      // The installer has no mutation receipt. Mark the boundary before calling it so a throw
+      // after an on-disk change is treated as uncertain instead of falsely reported as rolled back.
+      options.onExternalMutation?.(pkg);
       await installPlugin({
         raw: `clawhub:${pkg.ref}@${pkg.version}`,
         opts: {

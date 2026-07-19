@@ -13,6 +13,7 @@ import { readClawStatus } from "./lifecycle-state.js";
 import { buildClawAddPlan } from "./lifecycle.js";
 import { digestClawMcpServer, readClawMcpServerRefsByName } from "./mcp.js";
 import type { PackageRemovalDeps } from "./package-remove.js";
+import { digestClawPackageRef } from "./package-update-provenance.js";
 import { readClawPackageRefs } from "./provenance.js";
 import {
   CLAW_OUTPUT_STABILITY,
@@ -35,7 +36,11 @@ import {
   type ClawUpdatePlan,
 } from "./update-plan-types.js";
 
-export { CLAW_UPDATE_PLAN_SCHEMA_VERSION, type ClawUpdatePlan } from "./update-plan-types.js";
+export {
+  CLAW_UPDATE_PLAN_SCHEMA_VERSION,
+  type ClawUpdateAction,
+  type ClawUpdatePlan,
+} from "./update-plan-types.js";
 
 function digest(value: unknown): string {
   return `sha256:${createHash("sha256").update(stableStringify(value)).digest("hex")}`;
@@ -353,6 +358,7 @@ export async function buildClawUpdatePlan(params: {
                       ? "Managed workspace content already matches the target source."
                       : "Target source changes or restores managed workspace content.",
         ...(current ? { currentDigest: current.contentDigest } : {}),
+        ...(current ? { currentPresent: current.state !== "missing" } : {}),
         desiredDigest: target.digest,
       });
     }
@@ -374,6 +380,7 @@ export async function buildClawUpdatePlan(params: {
           ? "Target removes this file, but local drift must be preserved manually."
           : "Target manifest removes this managed workspace file.",
         currentDigest: current.contentDigest,
+        currentPresent: current.state !== "missing",
       });
     }
 
@@ -449,7 +456,7 @@ export async function buildClawUpdatePlan(params: {
               : action === "unchanged"
                 ? "Recorded package reference already matches the exact target version."
                 : "Target manifest changes the exact package version.",
-        ...(current ? { currentDigest: digest(current) } : {}),
+        ...(current ? { currentDigest: digestClawPackageRef(current) } : {}),
         desiredDigest: digest(target),
       });
       const capabilityChange = packageCapabilityChange({
@@ -491,7 +498,7 @@ export async function buildClawUpdatePlan(params: {
             : action === "release"
               ? "Target manifest releases this referenced package while preserving the shared artifact."
               : "Target manifest removes this managed package reference; apply may remove the unchanged artifact when it is otherwise unused.",
-          currentDigest: digest(current),
+          currentDigest: digestClawPackageRef(current),
         });
         const capabilityChange = packageCapabilityChange({
           pkg: current,
