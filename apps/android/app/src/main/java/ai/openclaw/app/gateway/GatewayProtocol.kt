@@ -451,6 +451,9 @@ enum class GatewayMethod(
   ApprovalHistory("approval.history"),
   PluginSurfaceRefresh("plugin.surface.refresh"),
   ConversationsList("conversations.list"),
+  BoardPromptAuthorize("board.prompt.authorize"),
+  BoardDataRead("board.data.read"),
+  BoardAction("board.action"),
 }
 
 enum class GatewayEvent(
