@@ -6,6 +6,7 @@ Docs: https://docs.openclaw.ai
 
 ### Changes
 
+- **First-run onboarding reliability:** preserve the model-setup redirect when the default chat session canonicalizes, bind reserved setup runs to the configured agent runtime, consume hatch drafts exactly once, and suppress expected superseded auth-refresh warnings.
 - **Discord and Slack native login:** register `/login` in native command menus while keeping pairing-code issuance limited to private chats and the Web UI.
 - **Trusted-proxy browser pairing:** optionally auto-approve new Control UI and WebChat devices from allowlisted proxy identities with non-admin scope caps, while keeping existing-device upgrades manual.
 - **Channel plugin ingress monitors:** add a shared plugin SDK monitor for durable admission, polling, pruning, claim identity validation, adoption handoff, and shutdown, and migrate IRC, Synology Chat, and Google Chat to the shared lifecycle.
