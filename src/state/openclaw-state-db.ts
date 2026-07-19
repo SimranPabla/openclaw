@@ -2,6 +2,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
+import { pathToFileURL } from "node:url";
 import { buildApprovalResolutionRef } from "../infra/approval-resolution-ref.js";
 import { createDedupeCache } from "../infra/dedupe.js";
 import {
@@ -112,6 +113,8 @@ export type OpenClawStateDatabase = {
 export type OpenClawStateDatabaseOptions = {
   env?: NodeJS.ProcessEnv;
   path?: string;
+  database?: OpenClawStateDatabase;
+  readOnly?: boolean;
 };
 export type OpenClawStateDatabaseSchemaMigration = {
   kind:
@@ -1641,6 +1644,40 @@ function resolveDatabasePath(options: OpenClawStateDatabaseOptions = {}): string
   return path.resolve(options.path ?? resolveOpenClawStateSqlitePath(options.env ?? process.env));
 }
 
+/** Open existing shared state without creating, migrating, chmodding, or configuring it. */
+export function openExistingOpenClawStateDatabaseReadOnly(
+  options: OpenClawStateDatabaseOptions = {},
+): OpenClawStateDatabase | undefined {
+  const pathname = resolveDatabasePath(options);
+  if (!existsSync(pathname)) {
+    return undefined;
+  }
+  const sqlite = requireNodeSqlite();
+  const hasWalSidecars = existsSync(`${pathname}-wal`) || existsSync(`${pathname}-shm`);
+  const uri = `${pathToFileURL(pathname).href}?mode=ro&immutable=1`;
+  const db = new sqlite.DatabaseSync(hasWalSidecars ? pathname : uri, { readOnly: true });
+  try {
+    assertSupportedSchemaVersion(db, pathname);
+  } catch (error) {
+    db.close();
+    throw error;
+  }
+  return {
+    db,
+    path: pathname,
+    walMaintenance: {
+      checkpoint: () => false,
+      close: () => {
+        if (!db.isOpen) {
+          return false;
+        }
+        db.close();
+        return true;
+      },
+    },
+  };
+}
+
 function assertStateDatabaseIntegrityBeforeMutation(
   database: DatabaseSync,
   pathname: string,
@@ -1656,6 +1693,9 @@ function assertStateDatabaseIntegrityBeforeMutation(
 export function openOpenClawStateDatabase(
   options: OpenClawStateDatabaseOptions = {},
 ): OpenClawStateDatabase {
+  if (options.database) {
+    return options.database;
+  }
   const env = options.env ?? process.env;
   const pathname = resolveDatabasePath(options);
   const cached = cachedDatabases.get(pathname);
