@@ -1600,6 +1600,20 @@ describe("doctor health contributions", () => {
     );
   });
 
+  it("wires Claw state diagnostics into doctor contributions", async () => {
+    vi.stubEnv("OPENCLAW_EXPERIMENTAL_CLAWS", "1");
+    const contributionChecks = await resolveDoctorContributionHealthChecks();
+
+    expect(contributionChecks.map((check) => check.id)).toContain("core/doctor/claws-state");
+  });
+
+  it("omits Claw doctor contributions without the experiment", () => {
+    vi.stubEnv("OPENCLAW_EXPERIMENTAL_CLAWS", "");
+    expect(resolveDoctorHealthContributions().map((entry) => entry.id)).not.toContain(
+      "doctor:claws-state",
+    );
+  });
+
   it("keeps implemented core health checks owned by ordered doctor contributions", async () => {
     const coreIds = CORE_HEALTH_CHECKS.map((check) => check.id);
     const contributionIds = resolveDoctorHealthContributions().flatMap(
@@ -2742,21 +2756,22 @@ describe("doctor health contributions", () => {
 
   it("reports runtime tool schema blockers during normal doctor runs", async () => {
     const contribution = requireDoctorContribution("doctor:runtime-tool-schemas");
+    const detect = vi.fn(async () => [
+      {
+        checkId: "core/doctor/runtime-tool-schemas",
+        severity: "error" as const,
+        message:
+          "Tool fuzzplugin_move_angles from plugin fuzzplugin has an unsupported input schema for runtime projection.",
+        path: "plugins.entries.fuzzplugin",
+        target: "fuzzplugin_move_angles",
+        requirement: 'fuzzplugin_move_angles.parameters.type must be "object"',
+        fixHint:
+          "Disable or update the offending plugin/tool so its parameters are a JSON object schema, then rerun doctor.",
+      },
+    ]);
     mocks.getHealthCheck.mockReturnValue({
       id: "core/doctor/runtime-tool-schemas",
-      detect: vi.fn(async () => [
-        {
-          checkId: "core/doctor/runtime-tool-schemas",
-          severity: "error",
-          message:
-            "Tool fuzzplugin_move_angles from plugin fuzzplugin has an unsupported input schema for runtime projection.",
-          path: "plugins.entries.fuzzplugin",
-          target: "fuzzplugin_move_angles",
-          requirement: 'fuzzplugin_move_angles.parameters.type must be "object"',
-          fixHint:
-            "Disable or update the offending plugin/tool so its parameters are a JSON object schema, then rerun doctor.",
-        },
-      ]),
+      detect,
     });
     const ctx = {
       cfg: {},
@@ -2764,7 +2779,7 @@ describe("doctor health contributions", () => {
       sourceConfigValid: true,
       prompter: buildDoctorPrompter(false),
       runtime: { log: vi.fn(), error: vi.fn(), exit: vi.fn() },
-      options: {},
+      options: { allowExec: true },
       cfgForPersistence: {},
       configPath: "/tmp/fake-openclaw.json",
       env: {},
@@ -2772,6 +2787,7 @@ describe("doctor health contributions", () => {
 
     await contribution.run(ctx);
 
+    expect(detect).toHaveBeenCalledWith(expect.objectContaining({ allowExecSecretRefs: true }));
     expect(ctx.healthOk).toBe(false);
     expect(mocks.note).toHaveBeenCalledWith(
       expect.stringContaining("Tool fuzzplugin_move_angles from plugin fuzzplugin"),
