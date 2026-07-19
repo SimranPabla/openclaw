@@ -53,6 +53,7 @@ import { loadPluginMetadataSnapshot } from "./plugin-metadata-snapshot.js";
 import { refreshPluginRegistryAfterConfigMutation } from "./registry-refresh.js";
 import { applySlotSelectionForPlugin } from "./slot-selection.js";
 import { setPluginEnabledInConfig } from "./toggle-config.js";
+import { collectClawPluginUninstallWarnings } from "./uninstall-claw-references.js";
 import {
   applyPluginUninstallDirectoryRemoval,
   formatUninstallActionLabels,
@@ -957,7 +958,14 @@ export async function uninstallManagedPlugin(params: {
       writeOptions: snapshot.writeOptions,
     });
     const directoryResult = await applyPluginUninstallDirectoryRemoval(plan.directoryRemoval);
-    const warnings = [...directoryResult.warnings];
+    const warnings = [
+      ...collectClawPluginUninstallWarnings({
+        pluginId,
+        installRecord: installRecords[pluginId],
+        env,
+      }),
+      ...directoryResult.warnings,
+    ];
     await refreshPluginRegistryAfterConfigMutation({
       config: nextConfig,
       reason: "source-changed",
