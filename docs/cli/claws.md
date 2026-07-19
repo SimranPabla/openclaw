@@ -45,6 +45,26 @@ Start with a version 1 JSON manifest:
 Package and workspace paths must remain inside the package root. Workspace
 sources reject symlinked parents and enforce per-file and aggregate byte limits.
 
+Workspace files are declared by path and read from package sidecars. Bootstrap
+files such as `SOUL.md` use named entries; additional files use package-relative
+sources and workspace-relative targets:
+
+```json
+{
+  "workspace": {
+    "bootstrapFiles": {
+      "SOUL.md": { "source": "workspace/SOUL.md" }
+    },
+    "files": [
+      {
+        "source": "workspace/reference/policy.md",
+        "target": "reference/policy.md"
+      }
+    ]
+  }
+}
+```
+
 ## Inspect and preview
 
 Validate the source without planning local changes:
@@ -74,9 +94,10 @@ when the source, destination, or live configuration changed after preview. Use
 `--agent-id` or `--workspace` during both preview and apply when package
 defaults collide with local state.
 
-At this stage, adding a Claw creates the new agent and workspace configuration
-and records installation provenance. Later Claws stages add managed workspace
-files and other declared resources.
+Adding a Claw creates the new agent and workspace configuration, writes declared
+workspace files, and records installation and per-file provenance. Existing
+files are not overwritten, and retries fail closed when owned content drifted.
+Later Claws stages add other declared resources.
 
 ## Command reference
 
