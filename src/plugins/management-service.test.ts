@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   applyUninstall: vi.fn(),
+  clawReferenceWarnings: vi.fn(),
   clawhubInstall: vi.fn(),
   commitRecords: vi.fn(),
   installRecords: vi.fn(),
@@ -74,6 +75,10 @@ vi.mock("./uninstall.js", async (importOriginal) => ({
 
 vi.mock("./install-record-commit.js", () => ({
   commitPluginInstallRecordsWithConfig: (...args: unknown[]) => mocks.commitRecords(...args),
+}));
+
+vi.mock("./uninstall-claw-references.js", () => ({
+  collectClawPluginUninstallWarnings: (...args: unknown[]) => mocks.clawReferenceWarnings(...args),
 }));
 
 vi.mock("./official-external-plugin-catalog.js", async (importOriginal) => ({
@@ -204,6 +209,7 @@ describe("plugin management service", () => {
     mocks.slotSelection.mockImplementation((config) => ({ config, warnings: [] }));
     mocks.installRecords.mockResolvedValue({});
     mocks.applyUninstall.mockResolvedValue({ directoryRemoved: true, warnings: [] });
+    mocks.clawReferenceWarnings.mockReturnValue([]);
     mocks.officialCatalog.mockResolvedValue({
       source: "hosted",
       entries: [],
@@ -930,6 +936,9 @@ describe("plugin management service", () => {
     });
     mocks.commitRecords.mockResolvedValue(undefined);
     mocks.applyUninstall.mockResolvedValue({ directoryRemoved: true, warnings: [] });
+    mocks.clawReferenceWarnings.mockReturnValue([
+      'Warning: plugin "diffs" is referenced by Claw: @acme/review.',
+    ]);
     mocks.refreshRegistry.mockResolvedValue(undefined);
 
     const result = await uninstallManagedPlugin({ pluginId: "diffs", env: {} });
@@ -953,12 +962,18 @@ describe("plugin management service", () => {
       )[0].nextConfig.plugins?.installs,
     ).toBeUndefined();
     expect(mocks.applyUninstall).toHaveBeenCalledWith({ target: "/tmp/extensions/diffs" });
+    expect(mocks.clawReferenceWarnings).toHaveBeenCalledWith({
+      pluginId: "diffs",
+      installRecord,
+      env: {},
+    });
     expect(mocks.refreshRegistry).toHaveBeenCalledWith(
       expect.objectContaining({ reason: "source-changed", installRecords: {} }),
     );
     expect(result).toMatchObject({
       pluginId: "diffs",
       removed: ["config entry", "install record", "directory"],
+      warnings: ['Warning: plugin "diffs" is referenced by Claw: @acme/review.'],
     });
   });
 
