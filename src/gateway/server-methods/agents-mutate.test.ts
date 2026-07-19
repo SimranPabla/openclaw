@@ -214,6 +214,7 @@ const { testing: agentsTesting, agentsHandlers } = await import("./agents.js");
 
 beforeEach(() => {
   agentsTesting.resetDepsForTests();
+  mocks.loadConfigReturn = {};
   mocks.listAgentEntries.mockImplementation((cfg: unknown) => getAgentList(cfg));
   mocks.findAgentEntryIndex.mockImplementation((list: unknown, agentId?: string) =>
     (Array.isArray(list) ? (list as MockAgentEntry[]) : []).findIndex(
@@ -1156,7 +1157,9 @@ describe("agents.delete", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.fsLstat.mockResolvedValue(null as unknown as import("node:fs").Stats);
-    mocks.loadConfigReturn = {};
+    mocks.loadConfigReturn = {
+      agents: { list: [{ id: "test-agent", workspace: "/workspace/test-agent" }] },
+    };
     mocks.findAgentEntryIndex.mockReturnValue(0);
     mocks.pruneAgentConfig.mockReturnValue({ config: {}, removedBindings: 2 });
   });
